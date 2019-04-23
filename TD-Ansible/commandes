@@ -1,0 +1,4 @@
+cp -fra /mnt/c/Users/Charles/OneDrive/Bureau/TD-Ansible/ /TD-Ansible
+
+
+cp -fra /mnt/d/OneDrive/Bureau/TD-Ansible/ /TD-Ansible

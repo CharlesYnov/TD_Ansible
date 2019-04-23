@@ -1,0 +1,104 @@
+- name: Création VMs
+  hosts: localhost
+  connection: local
+  tasks:
+  - name: Création RessourceGroup
+    azure_rm_resourcegroup:
+      name: ansible-rg
+      location: eastus
+
+  - name: Création VirtualNetwork
+    azure_rm_virtualnetwork:
+      resource_group: ansible-rg
+      name: ansible-rg-vnet1
+      address_prefixes: "10.0.0.0/16"
+
+  - name: Création Subnet
+    azure_rm_subnet:
+      resource_group: ansible-rg
+      name: ansible-rg-vnet1_sub1
+      address_prefix: "10.0.1.0/24"
+      virtual_network: ansible-rg-vnet1
+
+  - name: Création de l'IP Publique de la VM1
+    azure_rm_publicipaddress:
+      resource_group: ansible-rg
+      allocation_method: Static
+      name: ansible-rg-vm1-pip1
+    register: output_ip_address1
+
+  - name: Création de l'IP Publique de la VM2
+    azure_rm_publicipaddress:
+      resource_group: ansible-rg
+      allocation_method: Static
+      name: ansible-rg-vm2-pip1
+    register: output_ip_address2
+
+  - name: Afficher l'IP Publique
+    debug:
+      msg: "L'IP publique de la VM1 est {{ output_ip_address1.state.ip_address }}.\n
+            L'IP publique de la VM2 est {{ output_ip_address2.state.ip_address }}."
+
+  - name: Création du groupe de sécurité et autorisation du SSH
+    azure_rm_securitygroup:
+      resource_group: ansible-rg
+      name: ansible-rg-nsg1
+      rules:
+        - name: SSH
+          protocol: Tcp
+          destination_port_range: 22
+          access: Allow
+          priority: 1001
+          direction: Inbound
+
+  - name: Création de la carte réseau virtuelle
+    azure_rm_networkinterface:
+      resource_group: ansible-rg
+      name: ansible-rg-vm1-nic1
+      virtual_network: ansible-rg-vnet1
+      subnet: ansible-rg-vnet1_sub1
+      public_ip_name: ansible-rg-vm1-pip1
+      security_group: ansible-rg-nsg1
+
+  - name: Création de la carte réseau virtuelle
+    azure_rm_networkinterface:
+      resource_group: ansible-rg
+      name: ansible-rg-vm2-nic1
+      virtual_network: ansible-rg-vnet1
+      subnet: ansible-rg-vnet1_sub1
+      public_ip_name: ansible-rg-vm2-pip1
+      security_group: ansible-rg-nsg1
+
+  - name: Création de la VM1
+    azure_rm_virtualmachine:
+      resource_group: ansible-rg
+      name: ansible-rg-vm1
+      vm_size: Standard_DS1_v2
+      admin_username: charles
+      admin_password : Passw0rdroot
+      ssh_public_keys:
+        - path: /home/charles/.ssh/authorized_keys
+          key_data: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCzqZ+d+JY4jH/jz8WViNj/sr+fsBRCEd+xWuu9PH9uqX/eYi0LKQVFhJQrjw9CaEYxwMYzX83kajfmmp8l8CbyuGW3HGOHPHoXGDMXlMyGUw75dWFy3+r9+FDJJBdpi8ZnQV51anYFDKAL4MHZF4T/dZUW/mt67O/RTZmnqYf4xc0+0G5fwMc50EjB2b64Tp4qUmPBWPP5wPsZyKnoWibWrKouF2P8OKE9jZXtEkLUH2nkM2xfZaYZ9DOWqThjbLdscF2GEItAGc0TFN+8mRm2QAp908NfduZwKot25HF6UbQBeVNKZJnBJtFQZBBQ8XuhZOY5ysmMFUSGWeekjrMJHKFGuIaqEJz25H3CDMpLDJeLEf/PlUuHNVPbu8fVFG6k3ZmoVndBFJx1MFc/tRW1rfkVavROOC6hpxR309+cSYSUlgE/Hu0mfFCULIseYewGWcU9G1V+XBJ5s2OOFvt1cIW1GuZAAnkWuahFzih/LOa7oNTD3l+GIyDmvXQOGbwwjzIxY8cXk8IzEBBacAQFWKiV2egOvG+Z95b1jKn3dRyCS1+mczwZQq9qVTL3pPT+QrypiMPC95dNdKhcmx8eVTpaL1ZZBAskzjYK7VzXapcH25B+XGA48Guddh5BpA95GRQAF3nCY36GfRmuy2S2MgnzSGtB08yrCMi1TItfVQ== Charles pubkey
+      network_interfaces: ansible-rg-vm1-nic1
+      image:
+        offer: UbuntuServer
+        publisher: Canonical 
+        sku: '16.04-LTS'
+        version: latest
+
+  - name: Création de la VM2
+    azure_rm_virtualmachine:
+      resource_group: ansible-rg
+      name: ansible-rg-vm2
+      vm_size: Standard_DS1_v2
+      admin_username: charles
+      admin_password : Passw0rdroot
+      ssh_public_keys:
+        - path: /home/charles/.ssh/authorized_keys
+          key_data: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCzqZ+d+JY4jH/jz8WViNj/sr+fsBRCEd+xWuu9PH9uqX/eYi0LKQVFhJQrjw9CaEYxwMYzX83kajfmmp8l8CbyuGW3HGOHPHoXGDMXlMyGUw75dWFy3+r9+FDJJBdpi8ZnQV51anYFDKAL4MHZF4T/dZUW/mt67O/RTZmnqYf4xc0+0G5fwMc50EjB2b64Tp4qUmPBWPP5wPsZyKnoWibWrKouF2P8OKE9jZXtEkLUH2nkM2xfZaYZ9DOWqThjbLdscF2GEItAGc0TFN+8mRm2QAp908NfduZwKot25HF6UbQBeVNKZJnBJtFQZBBQ8XuhZOY5ysmMFUSGWeekjrMJHKFGuIaqEJz25H3CDMpLDJeLEf/PlUuHNVPbu8fVFG6k3ZmoVndBFJx1MFc/tRW1rfkVavROOC6hpxR309+cSYSUlgE/Hu0mfFCULIseYewGWcU9G1V+XBJ5s2OOFvt1cIW1GuZAAnkWuahFzih/LOa7oNTD3l+GIyDmvXQOGbwwjzIxY8cXk8IzEBBacAQFWKiV2egOvG+Z95b1jKn3dRyCS1+mczwZQq9qVTL3pPT+QrypiMPC95dNdKhcmx8eVTpaL1ZZBAskzjYK7VzXapcH25B+XGA48Guddh5BpA95GRQAF3nCY36GfRmuy2S2MgnzSGtB08yrCMi1TItfVQ== Charles pubkey
+      network_interfaces: ansible-rg-vm2-nic1
+      image:
+        offer: UbuntuServer
+        publisher: Canonical 
+        sku: '16.04-LTS'
+        version: latest

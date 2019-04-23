@@ -1,0 +1,5 @@
+---
+- name: Installation MySQL
+  apt: name=mysql-server state=present
+  notify:
+    - restart mysql

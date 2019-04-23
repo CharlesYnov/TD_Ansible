@@ -1,0 +1,17 @@
+- name: Installation des rôles sur la VM App
+  hosts: app
+  sudo: true
+  pre_tasks:
+    - name: update apt cache
+      apt: update_cache=yes
+  roles:
+    - webserver
+
+- name: Installation des rôles sur la VM BDD
+  hosts: bdd
+  sudo: true
+  pre_tasks:
+    - name: update apt cache
+      apt: update_cache=yes
+  roles:
+    - mysql
